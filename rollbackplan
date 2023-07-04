@@ -1,0 +1,60 @@
+node {
+    def SOME_CONSTANT = "whatever"
+    ...
+
+    stage('some stage name like Build') {
+        // Stuff to do as a part of this stage
+    }
+
+    stage('another stage') {
+        // More stuff
+    }
+
+    ...
+}
+    stage('Preparation') {
+        git branch: "master",
+        credentialsId: "27b86657-ba75-4b78-9ad6-8a9146bfbb3a",
+        url: "${https://github.com/Jagadeesh213/jenkinspipeline.git}"
+    }
+       stage('Build') {
+        sh "'${MAVEN_HOME}/bin/mvn' clean install"
+        junit '**/target/surefire-reports/TEST-*.xml'
+    }
+       stage('Beta') {
+        withCredentials([[$class: 'UsernamePasswordMultiBinding',
+            credentialsId: 'cd0784ff-9e4a-494d-ba1a-568b324be40c',
+            usernameVariable: 'tomcat', passwordVariable: 'secret']]) {
+                // Password is available as an env variable, but will be masked 
+                // if you try to print it out any which way
+                def output = deploy(WAR_PATH_FULL, TOMCAT_CTX_PATH_BETA,
+                        env.USERNAME, env.PASSWORD)
+                if (output.contains("FAIL - Deployed application at context path " + 
+                        "/${TOMCAT_CTX_PATH_BETA} but context failed to start")) {
+                    echo "----- Beta deployment log -----"
+                    echo output
+                    echo "-------------------------------"
+                    currentBuild.result = 'FAILURE'
+                    error "Beta stage deployment failure"
+                }
+            }
+
+        echo "Running integration tests"
+        sh "'${MAVEN_HOME}/bin/mvn' -Dtest=*IT test"
+        junit '**/target/surefire-reports/TEST-*.xml'
+    } 
+    def deploy(warPathFull, tomcatCtxPath, username, password) {
+    def envSuffix = ""
+    def isBeta = tomcatCtxPath.contains("beta")
+    if (isBeta) {
+        envSuffix = "beta"
+    } else {
+        envSuffix = "prod"
+    }
+    sh script: "cp ${warPathFull} ${warPathFull}.${envSuffix}" 
+    setSpringProfile(warPathFull, isBeta)
+    def output = sh script: "curl --upload-file '${warPathFull}.${envSuffix}' " +
+            "'http://${tomcat}:${secret}@localhost:8080/manager/text/deploy" + 
+            "?path=/${tomcatCtxPath}&update=true'", returnStdout: true
+    return output
+}
