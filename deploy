@@ -1,0 +1,28 @@
+pipeline{
+  agent any
+  stages{
+    stage("Git Checkout"){
+      steps{
+            git credentialsId: 'github', url: 'https://github.com/Jagadeesh213/jenkinspipeline.git'
+           }
+          }
+     stage("Maven Build"){
+       steps{
+            sh "mvn clean package"
+            sh "mv target/*.war target/webspp.war"
+             }
+            }
+     stage("deploy-dev"){
+       steps{
+          sshagent(['tomcat-dev1']) {
+          sh """
+          scp -o StrictHostKeyChecking=no target/webapp.war  
+          ubuntu@65.2.141.72:/opt/tomcat/webapps/
+          ssh ubuntu@65.2.141.72 /opt/tomcat/bin/shutdown.sh
+          ssh ubuntu@65.2.141.72 /opt/tomcat/bin/startup.sh
+           """
+            }
+          }
+        }
+      }
+    }
