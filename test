@@ -1,0 +1,54 @@
+pipeline {
+    agent any
+    tools {
+        maven "LocalMVN"
+    }
+    stages {
+        stage('Checkout') {
+            steps {
+              withCredentials([string(credentialsId: 'GitHub_Token', variable: 'github_token')]) {
+                checkout([$class: 'GitSCM',
+                          branches: [[name: '*/master']],
+                                extensions: [[$class: 'CleanCheckout']],
+                                userRemoteConfigs: [[url: 'https://' + env.github_token + '@' + 'github.com/Jagadeesh213/jenkinspipeline.git']]
+                       ])
+              }
+            }
+        }
+        stage('Build') {
+            steps {
+                sh "mvn -Dmaven.test.failure.ignore=true clean package"
+            }
+        }
+        stage('Push artifacts into artifactory') {
+            steps {
+              rtUpload (
+                serverId: 'my-artifactory',
+                spec: '''{
+                      "files": [
+                        {
+                          "pattern": "*.war",
+                          "target": "example-repo-local/build-files/"
+                        }
+                    ]
+                }'''
+              )
+          }
+        }
+        stage('Pull artifacts & deploy on tomcat') {
+            steps{
+          //        withCredentials([usernamePassword(credentialsId: 'my-artifactory-cred',
+          //                            usernameVariable: 'USERNAME',
+          //                            passwordVariable: 'PASSWORD')]) {
+          //          sh 'ssh ubuntu@65.2.141.72 curl -u ' + USERNAME + ':' + PASSWORD + ' -X GET "Your_JFrog_Artifactory_URL_of_file" --output /opt/tomcat9/webapps/webapp.war'
+            sh sshagent(credentials: ['27b86657-ba75-4b78-9ad6-8a9146bfbb3a']) {
+                    sh 'ssh root@tomcat-server "sudo systemctl stop tomcat"'
+                    sh 'ssh root@tomcat-server "rm -rf /opt/tomcat/webapps"'
+                    sh 'scp /var/lib/jenkins/workspace/Jenkinspipeline root@tomcat-server:/opt/tomcat/webapps'
+                    sh 'ssh root@tomcat-server "sudo systemctl start tomcat"'
+                    ssh -o StrictHostKeyChecking=no host
+            }
+          }
+       }
+    }
+}
