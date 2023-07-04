@@ -1,5 +1,5 @@
 pipeline {
-//    agent any
+    agent any
     tools {
         maven "LocalMVN"
     }
@@ -47,8 +47,8 @@ pipeline {
                     sh 'scp /var/lib/jenkins/workspace/Jenkinspipeline root@tomcat-server:/opt/tomcat/webapps'
                     sh 'ssh root@tomcat-server "sudo systemctl start tomcat"'
                     ssh -o StrictHostKeyChecking=no host
-            }
-          }
+              }
+//          }
        }
     }
 }
