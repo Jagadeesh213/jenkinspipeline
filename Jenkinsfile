@@ -32,7 +32,7 @@ pipeline {
 					echo 'Running the integration test..'
 				}
                                
-			}  
+			}  }
         }
         stage('approval') {
                 
@@ -45,10 +45,6 @@ pipeline {
                 steps {
 			echo "Running the deployment in prod process"
                         }
-      }
-    }
-                        }
         }
     }
 }
-
