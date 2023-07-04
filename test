@@ -23,12 +23,12 @@ pipeline {
         stage('Push artifacts into artifactory') {
             steps {
               rtUpload (
-                serverId: 'my-artifactory',
+                serverId: 'tomcat',
                 spec: '''{
                       "files": [
                         {
                           "pattern": "*.war",
-                          "target": "example-repo-local/build-files/"
+                          "target": "Jenkinspipeline/build-files/"
                         }
                     ]
                 }'''
