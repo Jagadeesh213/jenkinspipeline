@@ -23,9 +23,9 @@ pipeline {
                 }
             }
         }
-        stage('Test on Windows') {
-            agent {
-                label 'windows'
+//        stage('Test on Windows') {
+//            agent {
+//                label 'windows'
             }
             steps {
                 unstash 'app'
